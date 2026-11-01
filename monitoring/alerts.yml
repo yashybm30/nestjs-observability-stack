@@ -1,0 +1,13 @@
+groups:
+  - name: api
+    rules:
+      - alert: ApiDown
+        expr: up{job="api"} == 0
+        for: 30s
+        labels: {severity: critical}
+        annotations: {summary: "API scrape target is unavailable"}
+      - alert: HighWorkLatency
+        expr: histogram_quantile(0.95, sum(rate(lab_work_duration_seconds_bucket[5m])) by (le)) > 0.5
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "95th percentile work latency exceeds 500ms"}

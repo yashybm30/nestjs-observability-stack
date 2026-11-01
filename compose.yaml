@@ -1,0 +1,32 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports: ["127.0.0.1:6379:6379"]
+  app:
+    build: .
+    ports: ["3000:3000"]
+    environment:
+      REDIS_URL: redis://redis:6379
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4318/v1/traces
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    depends_on: [redis, jaeger]
+  prometheus:
+    image: prom/prometheus:v3.7.0
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+    ports: ["127.0.0.1:9090:9090"]
+  grafana:
+    image: grafana/grafana:12.2.0
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?Set GRAFANA_PASSWORD}
+    volumes:
+      - ./monitoring/datasources.yml:/etc/grafana/provisioning/datasources/default.yml:ro
+      - ./monitoring/dashboards.yml:/etc/grafana/provisioning/dashboards/default.yml:ro
+      - ./monitoring/api-dashboard.json:/var/lib/grafana/dashboards/api.json:ro
+    ports: ["127.0.0.1:3001:3000"]
+  jaeger:
+    image: jaegertracing/all-in-one:1.73.0
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports: ["127.0.0.1:16686:16686", "127.0.0.1:4318:4318"]
